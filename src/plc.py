@@ -21,11 +21,15 @@ class Plc:
     @staticmethod
     def int_to_bytearray(number: int) -> bytearray:
         # Convert the integer to bytes
-        byte_representation = number.to_bytes(4, byteorder='big', signed=False)
+        byte_representation = number.to_bytes(2, byteorder='big', signed=True)
 
         # Convert the bytes to a bytearray
         return bytearray(byte_representation)
 
-    def write_db(self, value: int) -> None:
-        data = self.int_to_bytearray(value)
-        self.client.db_write(1, 0, data)
+    def write_db(self, value: int):
+        try:
+            data = self.int_to_bytearray(value)
+            self.client.write_area(snap7.Area.DB, 1, 0, data)
+            print(f"Wrote value {value} to PLC")
+        except Exception as e:
+            raise Exception(f"Failed to write to PLC: {e}")

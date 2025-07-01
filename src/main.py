@@ -15,8 +15,8 @@ class VisionSystem:
             'NOK': (0, 0, 255),  # Vermelho
             'PEDRA': (255, 0, 0),  # Azul
         }
-        self.class_priority = {'PEDRA': 3, 'NOK': 2, 'OK': 1} #Priority map
-        self.class_values = {'OK': 0, 'NOK': 1, 'PEDRA': 2} #plc values
+        self.class_priority = {'PEDRA': 3, 'NOK': 2, 'OK': 1}  # Priority map
+        self.class_values = {'OK': 0, 'NOK': 1, 'PEDRA': 2}  # PLC values
         self.window_name = 'Vision System'
         self.resolution = (1280, 768)
         self.plc = Plc()
@@ -36,12 +36,13 @@ class VisionSystem:
             cv2.resizeWindow(self.window_name, *self.resolution)
             return True
         except Exception as e:
-            print(e)
+            logger.error(f"Error initializing camera: {e}")
             return False
 
     def process_frame(self) -> None:
-        """Processes the frame with YOLO and write results to PLC"""
+        """Processes the frame with YOLO, displays all objects, and writes highest-priority class to PLC"""
         if not self.plc.init_plc():
+            logger.error("Failed to initialize PLC")
             return
 
         while self.camera.IsGrabbing():
@@ -60,39 +61,44 @@ class VisionSystem:
                 highest_priority_class = None
                 highest_priority = 0
 
+                # Process all detections for display
                 for result in results:
-                    boxes = result.boxes.xyxy.cpu().numpy()
-                    classes = result.boxes.cls.cpu().numpy()
-                    scores = result.boxes.conf.cpu().numpy()
+                    if not result.boxes:  # Skip if no detections
+                        continue
+                    boxes = result.boxes.xyxy
+                    classes = result.boxes.cls
+                    scores = result.boxes.conf
 
                     for box, cls, score in zip(boxes, classes, scores):
                         x1, y1, x2, y2 = map(int, box)
                         label = self.model.names[int(cls)]
                         color = self.colors.get(label, (0, 255, 0))
+                        # Draw bounding box and label for all detected objects
                         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                         cv2.putText(frame, f'{label}: {score:.2f}', (x1, y1 - 10),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                        # Track highest-priority class
+                        # Track highest-priority class for PLC
                         priority = self.class_priority.get(label, 0)
                         if priority > highest_priority:
                             highest_priority = priority
                             highest_priority_class = label
 
+                # Write the highest-priority class to PLC
                 if highest_priority_class:
                     try:
                         plc_data = self.class_values[highest_priority_class]
                         self.plc.write_db(plc_data)
                         logger.info(f"Wrote class {highest_priority_class} (value {plc_data}) to PLC")
                     except Exception as e:
-                        logger.error(f"Failed to write: {e}")
+                        logger.error(f"Failed to write to PLC: {e}")
 
                 cv2.imshow(self.window_name, frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
             except Exception as e:
-                logger.error(f"Failed to write: {e}")
+                logger.error(f"Error processing frame: {e}")
                 continue
 
     def cleanup(self) -> None:
