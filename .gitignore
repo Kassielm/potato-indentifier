@@ -1,0 +1,4 @@
+.venv
+/pylon-25.06.4_linux-aarch64_setup.tar.gz
+__pycache__/
+*.pyc

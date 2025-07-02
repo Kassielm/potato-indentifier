@@ -1,0 +1,12 @@
+services:
+  potato-identifier:
+    build: .
+    image: potato-identifier
+    privileged: true
+    network_mode: "host"
+    ports:
+      - "0808:0808"
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    stdin_open: true
+    tty: true
