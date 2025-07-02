@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
     udev \
     libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pylon-*_setup.tar.gz .
@@ -23,14 +24,10 @@ RUN yes | ( \
     /opt/pylon/share/pylon/setup-usb.sh || true \
   )
 
-ENV PYLON_ROOT=/opt/pylon
-ENV LD_LIBRARY_PATH=${PYLON_ROOT}/lib
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
 COPY data/ ./data/
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
 
 CMD ["python", "src/main.py"]

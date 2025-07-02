@@ -7,7 +7,7 @@ class Plc:
     def init_plc(self):
         try:
             self.client = snap7.client.Client()
-            self.client.connect("192.168.100.83", 0, 1)  # IP, rack, slot
+            self.client.connect("192.168.2.201", 0, 1)  # IP, rack, slot
             if self.client.get_connected():
                 print("Conexão com o PLC estabelecida com sucesso!")
                 return True

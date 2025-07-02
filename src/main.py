@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class VisionSystem:
-    def __init__(self, model_path: str = '../data/models/best-v3.pt'):
+    def __init__(self, model_path: str = 'data/models/best-v3.pt'):
         self.model = YOLO(model_path)
         self.colors = {
             'OK': (0, 255, 0),  # Verde
