@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
     libxcb-cursor0 \
     udev \
+    qtwayland5 \
     libgl1-mesa-glx \
     libegl1 \
     libglib2.0-0 \

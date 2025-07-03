@@ -2,12 +2,12 @@ services:
   potato-identifier:
     build: .
     image: potato-identifier
+    container_name: potato-identifier-app
     privileged: true
     cap_add:
       - SYS_ADMIN
       - SYS_RAWIO
       - NET_ADMIN
-    network_mode: "host"
     group_add:
       - "44"
       - "20"
@@ -16,8 +16,10 @@ services:
     devices:
       - "/dev/bus/usb/002/004:/dev/bus/usb/002/004"
     volumes:
-      - /run/udev:/run/udev:ro
+      - /dev/bus/usb:/dev/bus/usb
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/dri:/dev/dri
+      - /home/torizon/.Xauthority:/root/.Xauthority:rw
     environment:
       - DISPLAY=:0
       - GENICAM_GENTL64_PATH=/opt/pylon/lib

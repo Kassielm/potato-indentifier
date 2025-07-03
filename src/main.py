@@ -28,6 +28,8 @@ class VisionSystem:
         try:
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             self.camera.Open()
+            logging.info("Câmera encontrada e aberta com sucesso.")
+
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             self.converter = pylon.ImageFormatConverter()
             self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
@@ -36,7 +38,8 @@ class VisionSystem:
             cv2.resizeWindow(self.window_name, *self.resolution)
             return True
         except Exception as e:
-            logger.error(f"Error initializing camera: {e}")
+            logger.error(f"Erro ao inicializar camera: {e}")
+            logger.error("Nenhuma câmera Pylon encontrada. Verifique a conexão USB e as permissões do Docker.")
             return False
 
     def process_frame(self) -> None:
@@ -124,9 +127,11 @@ class VisionSystem:
 
 def main():
     """Main function to run the vision system."""
-    vision_system = VisionSystem()
-    with vision_system:
-        vision_system.process_frame()
+    with VisionSystem() as vision_system:
+        if vision_system.camera and vision_system.camera.IsOpen():
+            vision_system.process_frame()
+        else:
+            print("Saindo do programa pois a câmera não pôde ser inicializada.")
 
 if __name__ == "__main__":
     main()
