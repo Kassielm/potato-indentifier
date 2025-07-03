@@ -4,11 +4,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     procps \
     usbutils \
+    libgles2 \
     libusb-1.0-0 \
+    libxcb-cursor0 \
     udev \
     libgl1-mesa-glx \
+    libegl1 \
     libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* && \
+    ldconfig && \
+    usermod -aG video root
 
 COPY pylon-*_setup.tar.gz .
 

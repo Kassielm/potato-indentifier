@@ -3,10 +3,23 @@ services:
     build: .
     image: potato-identifier
     privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - SYS_RAWIO
+      - NET_ADMIN
     network_mode: "host"
+    group_add:
+      - "44"
+      - "20"
     ports:
       - "0808:0808"
+    devices:
+      - "/dev/bus/usb/002/004:/dev/bus/usb/002/004"
     volumes:
-      - /dev/bus/usb:/dev/bus/usb
+      - /run/udev:/run/udev:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=:0
+      - GENICAM_GENTL64_PATH=/opt/pylon/lib
     stdin_open: true
     tty: true
