@@ -6,6 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     usbutils \
     libgles2 \
     libusb-1.0-0 \
+    libglib2.0-0 \
+    libxext6 \
+    libxrender1 \
+    libxcb-xinerama0 \
     libxcb-cursor0 \
     udev \
     qtwayland5 \
