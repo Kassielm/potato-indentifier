@@ -35,7 +35,7 @@ class VisionSystem:
             self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
             self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
             cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(self.window_name, *self.resolution)
+            cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             return True
         except Exception as e:
             logger.error(f"Erro ao inicializar camera: {e}")
@@ -59,7 +59,8 @@ class VisionSystem:
                 frame = image.GetArray()
                 grab_result.Release()
 
-                results = self.model(frame, conf=0.5)
+                small_frame = cv2.resize(frame, (640, 480))
+                results = self.model(small_frame, conf=0.5)
 
                 highest_priority_class = None
                 highest_priority = 0
@@ -97,6 +98,7 @@ class VisionSystem:
                         logger.error(f"Failed to write to PLC: {e}")
 
                 cv2.imshow(self.window_name, frame)
+                cv2.moveWindow(self.window_name, 0, 0)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
