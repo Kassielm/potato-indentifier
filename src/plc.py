@@ -9,13 +9,13 @@ class Plc:
             self.client = snap7.client.Client()
             self.client.connect("192.168.2.201", 0, 1)  # IP, rack, slot
             if self.client.get_connected():
-                print("Conexão com o PLC estabelecida com sucesso!")
+                print("PLC connected!")
                 return True
             else:
-                print("Falha ao conectar ao PLC.")
+                print("Failed to connect to PLC!.")
                 return False
         except Exception as e:
-            print(f"Erro ao conectar ao PLC: {e}")
+            print(f"Erro to connect to PLC: {e}")
             return False
 
     @staticmethod
