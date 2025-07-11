@@ -1,5 +1,8 @@
+import os
 import cv2
 import logging
+import asyncio
+import time
 from pypylon import pylon
 from ultralytics import YOLO
 from plc import Plc
@@ -8,7 +11,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class VisionSystem:
-    def __init__(self, model_path: str = 'data/models/best-v3.pt'):
+    # Fix: For docker usage, change this path do NOT use absolute patch. ex: data/models
+    def __init__(self, model_path: str = '../data/models/best_float32_edgetpu.tflite'):
         self.model = YOLO(model_path)
         self.colors = {
             'OK': (0, 255, 0),  # Verde
@@ -22,34 +26,40 @@ class VisionSystem:
         self.plc = Plc()
         self.camera = None
         self.converter = None
+        self.last_screenshot_time = 0
 
     def init_camera(self) -> bool:
         """Initializes the camera"""
         try:
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
             self.camera.Open()
-            logging.info("Câmera encontrada e aberta com sucesso.")
+            logging.info("Câmera succefully opened.")
 
+            # Setup câmera settings for video
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
             self.converter = pylon.ImageFormatConverter()
             self.converter.OutputPixelFormat = pylon.PixelType_BGR8packed
             self.converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
+
+            # Change to fullscreen image
             cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
             cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             return True
         except Exception as e:
-            logger.error(f"Erro ao inicializar camera: {e}")
-            logger.error("Nenhuma câmera Pylon encontrada. Verifique a conexão USB e as permissões do Docker.")
+            logger.error(f"Erro to initialize câmera: {e}")
+            logger.error("Cannot find a available device.")
             return False
 
-    def process_frame(self) -> None:
+    async def process_frame(self) -> None:
         """Processes the frame with YOLO, displays all objects, and writes highest-priority class to PLC"""
+        # Comment this to open without PLC.
         if not self.plc.init_plc():
             logger.error("Failed to initialize PLC")
             return
 
         while self.camera.IsGrabbing():
             try:
+                # Grab the video frames
                 grab_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
                 if not grab_result.GrabSucceeded():
                     logger.warning('Failed to grab frame')
@@ -60,6 +70,7 @@ class VisionSystem:
                 grab_result.Release()
 
                 small_frame = cv2.resize(frame, (640, 480))
+                # Use the IA model to classify
                 results = self.model(small_frame, conf=0.5)
 
                 highest_priority_class = None
@@ -73,11 +84,11 @@ class VisionSystem:
                     classes = result.boxes.cls
                     scores = result.boxes.conf
 
+                    # Draw boxes for each object encounter
                     for box, cls, score in zip(boxes, classes, scores):
                         x1, y1, x2, y2 = map(int, box)
                         label = self.model.names[int(cls)]
                         color = self.colors.get(label, (0, 255, 0))
-                        # Draw bounding box and label for all detected objects
                         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                         cv2.putText(frame, f'{label}: {score:.2f}', (x1, y1 - 10),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -97,14 +108,44 @@ class VisionSystem:
                     except Exception as e:
                         logger.error(f"Failed to write to PLC: {e}")
 
+                # Take a screenshot if have PEDRA or NOK
+                current_time = time.time()
+                if highest_priority in [2, 3] and (current_time - self.last_screenshot_time) >= 1:
+                    self.last_screenshot_time = current_time
+                    asyncio.create_task(self.screenshot(frame.copy()))
+
+                # Show the video frame
                 cv2.imshow(self.window_name, frame)
                 cv2.moveWindow(self.window_name, 0, 0)
+
+                # Press Q to exit
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
+
+                await asyncio.sleep(0.01)
 
             except Exception as e:
                 logger.error(f"Error processing frame: {e}")
                 continue
+
+    @staticmethod
+    async def screenshot(frame):
+        """Take a screenshot and save it"""
+        try:
+            # Set a screenshot directory or create a new directory
+            screenshot_dir = "screenshots"
+            if not os.path.exists(screenshot_dir):
+                os.makedirs(screenshot_dir)
+
+            # Set screenshot name
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            filename = os.path.join(screenshot_dir, f"capture_{timestamp}.png")
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, cv2.imwrite, filename, frame)
+            logger.info(f"Screenshot salvo: {filename}")
+        except Exception as e:
+            logger.error(f"Erro ao salvar screenshot: {e}")
 
     def cleanup(self) -> None:
         """Clean up camera, PLC, and OpenCV resources."""
@@ -127,13 +168,20 @@ class VisionSystem:
         """Support context manager for automatic cleanup."""
         self.cleanup()
 
-def main():
-    """Main function to run the vision system."""
+async def run_vision_system():
+    """Function to execute a vision system."""
     with VisionSystem() as vision_system:
         if vision_system.camera and vision_system.camera.IsOpen():
-            vision_system.process_frame()
+            await vision_system.process_frame()
         else:
-            print("Saindo do programa pois a câmera não pôde ser inicializada.")
+            print("Program exiting.")
+
+def main():
+    """Main function to run the vision system."""
+    try:
+        asyncio.run(run_vision_system())
+    except KeyboardInterrupt:
+        print("Program exiting by user.")
 
 if __name__ == "__main__":
     main()
