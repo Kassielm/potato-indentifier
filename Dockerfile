@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-cursor0 \
     udev \
     qtwayland5 \
+    gnupg \
     libgl1-mesa-glx \
     libegl1 \
     libglib2.0-0 \
@@ -20,7 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ldconfig && \
     usermod -aG video root
 
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list && \
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" |  \
+    tee /etc/apt/sources.list.d/coral-edgetpu.list && \
     wget -q -O - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
     apt-get update && \
     apt-get install -y libedgetpu1-std && \
@@ -41,7 +43,8 @@ RUN yes | ( \
   )
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir --extra-index-url https://google-coral.github.io/py-repo/ -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir --extra-index-url  \
+    https://google-coral.github.io/py-repo/ -r requirements.txt
 
 COPY src/ ./src/
 COPY data/ ./data/

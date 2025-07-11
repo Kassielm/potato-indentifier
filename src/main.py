@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class VisionSystem:
     # Fix: For docker usage, change this path do NOT use absolute patch. ex: data/models
-    def __init__(self, model_path: str = '../data/models/best_float32_edgetpu.tflite'):
+    def __init__(self, model_path: str = 'data/models/best_float32_edgetpu.tflite'):
         self.model = YOLO(model_path)
         self.colors = {
             'OK': (0, 255, 0),  # Verde
