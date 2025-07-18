@@ -1,5 +1,6 @@
 import cv2
 import logging
+import tflite_runtime.interpreter as tflite
 from pypylon import pylon
 from ultralytics import YOLO
 from plc import Plc
@@ -8,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class VisionSystem:
-    def __init__(self, model_path: str = 'data/models/best-v3.pt'):
+    def __init__(self, model_path: str = 'data/models/best_float32.tflite'):
         self.model = YOLO(model_path)
         self.colors = {
             'OK': (0, 255, 0),  # Verde
